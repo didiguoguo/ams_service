@@ -21,7 +21,8 @@ CREATE TABLE student (
     enter_time int(20),
     class_id int(10),
     class_name varchar(64),
-    result int(3),
+    theoty_result int(3),
+    practise_result int(3),
     primary key(id)
 );
 

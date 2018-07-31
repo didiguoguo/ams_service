@@ -40,7 +40,8 @@ class Student(Base):
     enter_time = Column(Integer())
     class_id = Column(Integer())
     class_name = Column(String(64))
-    result = Column(Integer())
+    theory_result = Column(Integer())
+    practise_result = Column(Integer())
 
     def info(self):
         return dict(id=self.id,
@@ -52,7 +53,8 @@ class Student(Base):
                     enter_time=self.enter_time,
                     class_id=self.class_id,
                     class_name=self.class_name,
-                    result=self.result
+                    theory_result=self.theory_result,
+                    practise_result=self.practise_result
                     )
 
 
@@ -80,29 +82,31 @@ class Classes(Base):
 class Test(Base):
     __tablename__ = 'test'
     id = Column(Integer(), primary_key=True, nullable=False)
-    test_name = Column(String(64), nullable=False)
-    test_type = Column(String(20))
-    test_work_type = Column(String(20))
+    name = Column(String(64), nullable=False)
+    type = Column(String(20))
+    work_type = Column(String(20))
     target_name = Column(String(128))
     target_id = Column(Integer())
     start_time = Column(Integer())
+    create_time = Column(Integer())
     end_time = Column(Integer())
     duration = Column(Integer())
-    test_times = Column(Integer())
-    test_status = Column(String(10))
+    times = Column(Integer())
+    status = Column(String(10))
 
     def info(self):
         return dict(id=self.id,
-                    test_name=self.test_name,
-                    test_type=self.test_type,
-                    test_work_type=self.test_work_type,
+                    name=self.name,
+                    type=self.type,
+                    work_type=self.work_type,
                     target_name=self.target_name,
                     target_id=self.target_id,
                     start_time=self.start_time,
                     end_time=self.end_time,
+                    create_time=self.create_time,
                     duration=self.duration,
-                    test_times=self.test_times,
-                    test_status=self.test_status
+                    times=self.times,
+                    status=self.status
                     )
 
 
@@ -128,6 +132,7 @@ def get_students():
         }
         session = DBsession()
         query = session.query(Student).filter(Student.id > 0)
+        result = None
         if request.args:
             if request.args.get('student_name',default = '') != '':
                 query = query.filter(or_(
@@ -136,16 +141,20 @@ def get_students():
                     ))
             if request.args.get('id_card_num',default = '') != '':
                 query = query.filter(Student.id_card_num == request.args['id_card_num'])
-            if request.args.get('current_page',default='') != '' and int(request.args['current_page']) > 0:
+            if request.args.get('class_id',default = '') != '':
+                query = query.filter(Student.class_id == request.args['class_id'])
+            response['pagination']['total'] = query.count()
+            if request.args.get('current_page',default='') != '' and int(request.args['current_page']) > 0 and request.args.get('page_size',default='') != '' and int(request.args['page_size']) > 0:
                 current_page = int(request.args['current_page'])
-            if request.args.get('page_size',default='') != '' and int(request.args['page_size']) > 0:
                 page_size = int(request.args['page_size'])
-        response['pagination']['total'] = query.count()
-        result = query.order_by(Student.id.desc()).limit(page_size).offset((current_page-1)*page_size).all()
+                result = query.order_by(Student.id.desc()).limit(page_size).offset((current_page-1)*page_size).all()
+        else:
+            response['pagination']['total'] = query.count()
+            response['pagination']['page_size'] = query.count()
+            result = query.order_by(Student.id.desc()).all()
         for i in result:
             response['list'].append(i.info())
         session.close()
-        print('hehehehehehehe')
         return jsonify(response)
     except Exception as err:
         logging.exception('error')
@@ -254,11 +263,7 @@ def get_classes():
     current_page = 1
     page_size = 10
     total = 0
-    if request.args:
-        if request.args['current_page'] and int(request.args['current_page']) > 0:
-            current_page = int(request.args['current_page'])
-        if request.args['page_size'] and int(request.args['page_size']) > 0:
-            page_size = int(request.args['page_size'])
+    result = None
     try:
         response = {
             'list': [],
@@ -271,15 +276,26 @@ def get_classes():
             }
         }
         session = DBsession()
-        response['pagination']['total'] = session.query(Classes).count()
-        ret = session.query(Classes).order_by(Classes.id.desc()).limit(
-            page_size).offset((current_page-1)*page_size)
-        for i in ret:
+        query = session.query(Classes).filter(Classes.id > 0)
+        if request.args:
+            if request.args.get('class_name',default = '') != '':
+                query = query.filter(Classes.class_name.like('%{e}%'.format(e=request.args['class_name'])))
+            response['pagination']['total'] = query.count()
+            if request.args.get('current_page',default='') != '' and int(request.args['current_page']) > 0 and request.args.get('page_size',default='') != '' and int(request.args['page_size']) > 0:
+                current_page = int(request.args['current_page'])
+                page_size = int(request.args['page_size'])
+                result = query.order_by(Classes.id.desc()).limit(page_size).offset((current_page-1)*page_size).all()
+        else:
+            response['pagination']['total'] = query.count()
+            response['pagination']['page_size'] = query.count()
+            result = query.order_by(Classes.id.desc()).all()
+        for i in result:
             response['list'].append(i.info())
         session.close()
         return jsonify(response)
     except:
-        return
+        logging.exception('error')
+        return 
 
 
 @app.route('/class/<int:id>', methods=['GET'])
@@ -365,6 +381,148 @@ def delete_classes():
     try:
         session = DBsession()
         session.query(Classes).filter(Classes.id.in_(
+            request.json['ids'])).delete(synchronize_session=False)
+        session.commit()
+        session.close()
+        return jsonify({
+            'code': 200,
+            'message': 'succ',
+        })
+    except:
+        return jsonify({
+            'code': 404,
+            'message': 'Not Found'
+        })
+
+
+
+
+@app.route('/tests/', methods=['GET'])
+def get_tests():
+    current_page = 1
+    page_size = 10
+    total = 0
+    result = None
+    try:
+        response = {
+            'list': [],
+            'code': 200,
+            'message': 'succ',
+            'pagination': {
+                'current_page': current_page,
+                'page_size': page_size,
+                'total': total,
+            }
+        }
+        session = DBsession()
+        query = session.query(Test).filter(Test.id > 0)
+        if request.args:
+            if request.args.get('name',default = '') != '':
+                query = query.filter(Test.name.like('%{e}%'.format(e=request.args['name'])))
+            response['pagination']['total'] = query.count()
+            if request.args.get('current_page',default='') != '' and int(request.args['current_page']) > 0 and request.args.get('page_size',default='') != '' and int(request.args['page_size']) > 0:
+                current_page = int(request.args['current_page'])
+                page_size = int(request.args['page_size'])
+                result = query.order_by(Test.id.desc()).limit(page_size).offset((current_page-1)*page_size).all()
+        else:
+            response['pagination']['total'] = query.count()
+            response['pagination']['page_size'] = query.count()
+            result = query.order_by(Test.id.desc()).all()
+        for i in result:
+            response['list'].append(i.info())
+        session.close()
+        return jsonify(response)
+    except:
+        logging.exception('error')
+        return 
+
+
+@app.route('/test/<int:id>', methods=['GET'])
+def get_by_id(id):
+    try:
+        response = {
+            'data': {},
+            'code': 200,
+            'message': 'succ',
+        }
+        session = DBsession()
+        response['data'] = session.query(
+            Test).filter_by(id=id).first().info()
+        session.close()
+        return jsonify(response)
+    except:
+        return
+
+
+@app.route('/add/test/', methods=['POST'])
+def add_test():
+    if not request.json:
+        return jsonify({
+            'code': 400,
+            'message': 'param error'
+        })
+    try:
+        test = Test(
+            name = request.json['name'],
+            type = request.json['type'],
+            target_id = request.json['target_id'],
+            duration = int(request.json['duration']),
+            times = int(request.json['times']),
+            work_type = request.json['work_type'],
+            start_time = int(request.json['cycle'][0]),
+            end_time = int(request.json['cycle'][1]),
+            create_time = int(datetime.now().strftime('%Y%m%d%H%M%S'))
+        )
+        session = DBsession()
+        session.add(test)
+        session.commit()
+        session.close()
+        return jsonify({
+            'code': 200,
+            'message': 'succ',
+        })
+    except:
+        return jsonify({
+            'code': 400,
+            'message': 'server error'
+        })
+
+
+@app.route('/modify/test/<int:id>', methods=['PATCH'])
+def modify_test(id):
+    if not request.json or not id:
+        return jsonify({
+            'code': 400,
+            'message': 'param error'
+        })
+    try:
+        session = DBsession()
+        for k, v in request.json.items():
+            if k and v:
+                session.query(Test).filter(Test.id == id).update({k: v})
+        session.commit()
+        session.close()
+        return jsonify({
+            'code': 200,
+            'message': 'succ',
+        })
+    except:
+        return jsonify({
+            'code': 400,
+            'message': 'inner error'
+        })
+
+
+@app.route('/delete/tests/', methods=['DELETE'])
+def delete_tests():
+    if not request.json:
+        return jsonify({
+            'code': 400,
+            'message': 'param error'
+        })
+    try:
+        session = DBsession()
+        session.query(Test).filter(Test.id.in_(
             request.json['ids'])).delete(synchronize_session=False)
         session.commit()
         session.close()
