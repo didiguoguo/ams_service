@@ -6,6 +6,7 @@ from flask_cors import CORS
 from sqlalchemy import and_, or_
 from datetime import datetime
 import logging
+import hashlib
 logging.basicConfig(level=logging.INFO)
 
 from sqlalchemy import Column, String, Integer, create_engine
@@ -110,12 +111,29 @@ class Test(Base):
                     )
 
 
+class Token(Base):
+    __tablename__ = 'token'
+    user_id = Column(Integer(), primary_key=True, nullable=False)
+    token = Column(String(64), nullable=False)
+    create_time = Column(Integer())
+
+    def info(self):
+        return dict(user_id=self.user_id,
+                    token=self.token,
+                    create_time=self.create_time,
+                    )
+
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
 
 
 @app.route('/students/', methods=['GET'])
 def get_students():
+    if not request.headers.get('token',None):
+        return jsonify({
+            'code': 401,
+            'message': '用户没有权限（令牌、用户名、密码错误）。'
+        })
     current_page = 1
     page_size = 10
     total = 0
@@ -163,6 +181,11 @@ def get_students():
 
 @app.route('/student/<int:id>', methods=['GET'])
 def get_student_by_id(id):
+    if not request.headers.get('token',None):
+        return jsonify({
+            'code': 401,
+            'message': '用户没有权限（令牌、用户名、密码错误）。'
+        })
     try:
         response = {
             'data': {},
@@ -180,6 +203,11 @@ def get_student_by_id(id):
 
 @app.route('/add/student/', methods=['POST'])
 def add_student():
+    if not request.headers.get('token',None):
+        return jsonify({
+            'code': 401,
+            'message': '用户没有权限（令牌、用户名、密码错误）。'
+        })
     if not request.json:
         return jsonify({
             'code': 400,
@@ -211,6 +239,11 @@ def add_student():
 
 @app.route('/modify/student/<int:id>', methods=['PATCH'])
 def modify_student(id):
+    if not request.headers.get('token',None):
+        return jsonify({
+            'code': 401,
+            'message': '用户没有权限（令牌、用户名、密码错误）。'
+        })
     if not request.json or not id:
         return jsonify({
             'code': 400,
@@ -236,6 +269,11 @@ def modify_student(id):
 
 @app.route('/delete/students/', methods=['DELETE'])
 def delete_students():
+    if not request.headers.get('token',None):
+        return jsonify({
+            'code': 401,
+            'message': '用户没有权限（令牌、用户名、密码错误）。'
+        })
     if not request.json:
         return jsonify({
             'code': 400,
@@ -260,6 +298,11 @@ def delete_students():
 
 @app.route('/classes/', methods=['GET'])
 def get_classes():
+    if not request.headers.get('token',None):
+        return jsonify({
+            'code': 401,
+            'message': '用户没有权限（令牌、用户名、密码错误）。'
+        })
     current_page = 1
     page_size = 10
     total = 0
@@ -300,6 +343,11 @@ def get_classes():
 
 @app.route('/class/<int:id>', methods=['GET'])
 def get_class_by_id(id):
+    if not request.headers.get('token',None):
+        return jsonify({
+            'code': 401,
+            'message': '用户没有权限（令牌、用户名、密码错误）。'
+        })
     try:
         response = {
             'data': {},
@@ -317,6 +365,11 @@ def get_class_by_id(id):
 
 @app.route('/add/class/', methods=['POST'])
 def add_class():
+    if not request.headers.get('token',None):
+        return jsonify({
+            'code': 401,
+            'message': '用户没有权限（令牌、用户名、密码错误）。'
+        })
     if not request.json:
         return jsonify({
             'code': 400,
@@ -348,6 +401,11 @@ def add_class():
 
 @app.route('/modify/class/<int:id>', methods=['PATCH'])
 def modify_class(id):
+    if not request.headers.get('token',None):
+        return jsonify({
+            'code': 401,
+            'message': '用户没有权限（令牌、用户名、密码错误）。'
+        })
     if not request.json or not id:
         return jsonify({
             'code': 400,
@@ -373,6 +431,11 @@ def modify_class(id):
 
 @app.route('/delete/classes/', methods=['DELETE'])
 def delete_classes():
+    if not request.headers.get('token',None):
+        return jsonify({
+            'code': 401,
+            'message': '用户没有权限（令牌、用户名、密码错误）。'
+        })
     if not request.json:
         return jsonify({
             'code': 400,
@@ -399,6 +462,11 @@ def delete_classes():
 
 @app.route('/tests/', methods=['GET'])
 def get_tests():
+    if not request.headers.get('token',None):
+        return jsonify({
+            'code': 401,
+            'message': '用户没有权限（令牌、用户名、密码错误）。'
+        })
     current_page = 1
     page_size = 10
     total = 0
@@ -439,6 +507,11 @@ def get_tests():
 
 @app.route('/test/<int:id>', methods=['GET'])
 def get_by_id(id):
+    if not request.headers.get('token',None):
+        return jsonify({
+            'code': 401,
+            'message': '用户没有权限（令牌、用户名、密码错误）。'
+        })
     try:
         response = {
             'data': {},
@@ -456,6 +529,11 @@ def get_by_id(id):
 
 @app.route('/add/test/', methods=['POST'])
 def add_test():
+    if not request.headers.get('token',None):
+        return jsonify({
+            'code': 401,
+            'message': '用户没有权限（令牌、用户名、密码错误）。'
+        })
     if not request.json:
         return jsonify({
             'code': 400,
@@ -490,6 +568,11 @@ def add_test():
 
 @app.route('/modify/test/<int:id>', methods=['PATCH'])
 def modify_test(id):
+    if not request.headers.get('token',None):
+        return jsonify({
+            'code': 401,
+            'message': '用户没有权限（令牌、用户名、密码错误）。'
+        })
     if not request.json or not id:
         return jsonify({
             'code': 400,
@@ -515,6 +598,11 @@ def modify_test(id):
 
 @app.route('/delete/tests/', methods=['DELETE'])
 def delete_tests():
+    if not request.headers.get('token',None):
+        return jsonify({
+            'code': 401,
+            'message': '用户没有权限（令牌、用户名、密码错误）。'
+        })
     if not request.json:
         return jsonify({
             'code': 400,
@@ -536,9 +624,104 @@ def delete_tests():
             'message': 'Not Found'
         })
 
+@app.route('/user/login/', methods=['POST'])
+def login():
+    if not request.json:
+        return jsonify({
+            'code': 400,
+            'message': 'param error'
+        })
+    try:
+        session = DBsession()
+        query = session.query(Test).filter(and_(User.name == request.json['name'], User.password == request.json['password']))
+        if(query.count() == 0):
+            session.close()
+            return jsonify({
+                'code': 401,
+                'message': '用户名不存在或密码错误',
+            })
+        else:
+            m5 = hashlib.md5()
+            m5.update(request.json['password'].encode(encoding='utf-8'))
+            user = query.first().info()
+            tokenStr = m5.hexdigest()
+            token = Token(
+                token = tokenStr,
+                user_id = user['id'],
+                create_time = int(datetime.now().strftime('%Y%m%d%H%M%S'))
+            )
+            session.query(Token).filter(Token.user_id == token.user_id).delete()
+            session.add(token)
+            session.commit()
+            session.close()
+            return jsonify({
+                'code': 200,
+                'message': 'succ',
+                'token': tokenStr
+            })
+    except:
+        return jsonify({
+            'code': 400,
+            'message': 'inner error'
+        })
+    # except Exception as err:
+    #         logging.exception('error')
+    #         return 
+
+@app.route('/user/logout/', methods=['POST'])
+def logout():
+    if not request.headers.get('token', None):
+        return jsonify({
+            'code': 401,
+            'message': '用户没有权限（令牌、用户名、密码错误）。'
+        })
+    try:
+        session = DBsession()
+        session.query(Token).filter(Token.token == request.headers.get('token', None)).delete()
+        session.commit()
+        session.close()
+        return jsonify({
+            'code': 200,
+            'message': 'succ'
+        })
+    except:
+        return jsonify({
+            'code': 400,
+            'message': 'inner error'
+        })
+
+@app.route('/user/', methods=['GET'])
+def get_user():
+    token = request.headers.get('token', None)
+    if not token:
+        return jsonify({
+            'code': 401,
+            'message': '用户没有权限（令牌、用户名、密码错误）。'
+        })
+    else: 
+        try:
+            response = {
+                'data': {},
+                'code': 200,
+                'message': 'succ',
+            }
+            session = DBsession()
+            token_data = session.query(Token).filter(Token.token == token).first()
+            if not token_data:
+                return jsonify({
+                    'code': 401,
+                    'message': '用户没有权限（令牌、用户名、密码错误）。'
+                })
+            response['data'] = session.query(User).filter(User.id == token_data.user_id).first().info()
+            session.close()
+            return jsonify(response)
+        except Exception as err:
+            logging.exception('error')
+            return 
+
 
 if __name__ == '__main__':
     engine = create_engine(
         'mysql+mysqlconnector://root:password@localhost:3306/ams')
     DBsession = sessionmaker(bind=engine)
-    app.run(host="192.168.1.58", port=5000, debug=True)
+    app.run(host="192.168.1.14", port=5000, debug=True)
