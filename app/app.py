@@ -150,7 +150,6 @@ def get_students():
         }
         session = DBsession()
         query = session.query(Student).filter(Student.id > 0)
-        result = None
         if request.args:
             if request.args.get('student_name',default = '') != '':
                 query = query.filter(or_(
@@ -165,12 +164,14 @@ def get_students():
             if request.args.get('current_page',default='') != '' and int(request.args['current_page']) > 0 and request.args.get('page_size',default='') != '' and int(request.args['page_size']) > 0:
                 current_page = int(request.args['current_page'])
                 page_size = int(request.args['page_size'])
-                result = query.order_by(Student.id.desc()).limit(page_size).offset((current_page-1)*page_size).all()
+                query = query.order_by(Student.id.desc()).limit(page_size).offset((current_page-1)*page_size)
+            else:
+                query = query.order_by(Student.id.desc())
         else:
             response['pagination']['total'] = query.count()
             response['pagination']['page_size'] = query.count()
-            result = query.order_by(Student.id.desc()).all()
-        for i in result:
+            query = query.order_by(Student.id.desc())
+        for i in query.all():
             response['list'].append(i.info())
         session.close()
         return jsonify(response)
@@ -306,7 +307,6 @@ def get_classes():
     current_page = 1
     page_size = 10
     total = 0
-    result = None
     try:
         response = {
             'list': [],
@@ -327,12 +327,14 @@ def get_classes():
             if request.args.get('current_page',default='') != '' and int(request.args['current_page']) > 0 and request.args.get('page_size',default='') != '' and int(request.args['page_size']) > 0:
                 current_page = int(request.args['current_page'])
                 page_size = int(request.args['page_size'])
-                result = query.order_by(Classes.id.desc()).limit(page_size).offset((current_page-1)*page_size).all()
+                query = query.order_by(Classes.id.desc()).limit(page_size).offset((current_page-1)*page_size)
+            else:
+                query = query.order_by(Classes.id.desc())
         else:
             response['pagination']['total'] = query.count()
             response['pagination']['page_size'] = query.count()
-            result = query.order_by(Classes.id.desc()).all()
-        for i in result:
+            query = query.order_by(Classes.id.desc())
+        for i in query.all():
             response['list'].append(i.info())
         session.close()
         return jsonify(response)
@@ -470,7 +472,6 @@ def get_tests():
     current_page = 1
     page_size = 10
     total = 0
-    result = None
     try:
         response = {
             'list': [],
@@ -487,16 +488,20 @@ def get_tests():
         if request.args:
             if request.args.get('name',default = '') != '':
                 query = query.filter(Test.name.like('%{e}%'.format(e=request.args['name'])))
+            if request.args.get('work_type',default = '') != '':
+                query = query.filter(Test.work_type.like('%{e}%'.format(e=request.args['work_type'])))
             response['pagination']['total'] = query.count()
             if request.args.get('current_page',default='') != '' and int(request.args['current_page']) > 0 and request.args.get('page_size',default='') != '' and int(request.args['page_size']) > 0:
                 current_page = int(request.args['current_page'])
                 page_size = int(request.args['page_size'])
-                result = query.order_by(Test.id.desc()).limit(page_size).offset((current_page-1)*page_size).all()
+                query = query.order_by(Test.id.desc()).limit(page_size).offset((current_page-1)*page_size)
+            else:
+                query = query.order_by(Test.id.desc())
         else:
             response['pagination']['total'] = query.count()
             response['pagination']['page_size'] = query.count()
-            result = query.order_by(Test.id.desc()).all()
-        for i in result:
+            query = query.order_by(Test.id.desc())
+        for i in query.all():
             response['list'].append(i.info())
         session.close()
         return jsonify(response)
@@ -633,7 +638,7 @@ def login():
         })
     try:
         session = DBsession()
-        query = session.query(Test).filter(and_(User.name == request.json['name'], User.password == request.json['password']))
+        query = session.query(User).filter(and_(User.name == request.json['name'], User.password == request.json['password']))
         if(query.count() == 0):
             session.close()
             return jsonify({
@@ -642,7 +647,7 @@ def login():
             })
         else:
             m5 = hashlib.md5()
-            m5.update(request.json['password'].encode(encoding='utf-8'))
+            m5.update((request.json['password'] + datetime.now().strftime('%Y%m%d%H%M%S')).encode(encoding='utf-8'))
             user = query.first().info()
             tokenStr = m5.hexdigest()
             token = Token(
@@ -650,7 +655,7 @@ def login():
                 user_id = user['id'],
                 create_time = int(datetime.now().strftime('%Y%m%d%H%M%S'))
             )
-            session.query(Token).filter(Token.user_id == token.user_id).delete()
+            session.query(Token).filter(Token.user_id == user['id']).delete()
             session.add(token)
             session.commit()
             session.close()
